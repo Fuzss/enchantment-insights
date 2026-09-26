@@ -3,7 +3,7 @@ package fuzs.enchantmentinsights.common.client.gui.tooltip;
 import com.google.common.collect.ImmutableList;
 import fuzs.enchantmentinsights.common.client.util.EnchantmentWithLevel;
 import fuzs.enchantmentinsights.common.config.ClientConfig;
-import fuzs.puzzleslib.common.api.init.v3.registry.ResourceKeyHelper;
+import fuzs.puzzleslib.common.api.init.v3.registry.ContentRegistrationHelper;
 import fuzs.tooltipinsights.common.api.v1.client.gui.tooltip.DescriptionLines;
 import fuzs.tooltipinsights.common.api.v1.client.gui.tooltip.InternalNameLines;
 import fuzs.tooltipinsights.common.api.v1.client.gui.tooltip.ModNameLines;
@@ -29,7 +29,7 @@ public final class EnchantmentTooltipLines {
                 return contents.getKey();
             } else {
                 ResourceKey<Enchantment> key = enchantment.enchantment().unwrapKey().orElseThrow();
-                return ResourceKeyHelper.getTranslationKey(key);
+                return ContentRegistrationHelper.getTranslationKey(key);
             }
         }
     };

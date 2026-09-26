@@ -7,7 +7,7 @@ import fuzs.enchantmentinsights.common.client.handler.EnchantingTableTooltipHand
 import fuzs.enchantmentinsights.common.data.client.ModLanguageProvider;
 import fuzs.puzzleslib.common.api.client.core.v1.ClientModConstructor;
 import fuzs.puzzleslib.common.api.core.v1.util.TransformingForwardingList;
-import fuzs.puzzleslib.neoforge.api.data.v2.core.DataProviderHelper;
+import fuzs.puzzleslib.neoforge.api.data.v3.core.DataProviderBuilder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.EnchantmentScreen;
 import net.minecraft.network.chat.Component;
@@ -26,7 +26,7 @@ public class EnchantmentInsightsNeoForgeClient {
     public EnchantmentInsightsNeoForgeClient() {
         ClientModConstructor.construct(EnchantmentInsights.MOD_ID, EnchantmentInsightsClient::new);
         registerEventHandlers(NeoForge.EVENT_BUS);
-        DataProviderHelper.registerDataProviders(EnchantmentInsights.MOD_ID, ModLanguageProvider::new);
+        DataProviderBuilder.of(EnchantmentInsights.MOD_ID).addProvider(ModLanguageProvider::new);
     }
 
     private static void registerEventHandlers(IEventBus eventBus) {

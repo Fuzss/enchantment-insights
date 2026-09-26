@@ -13,13 +13,12 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentUtils;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.tags.EnchantmentTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
 
 import java.util.Map;
-import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -36,26 +35,20 @@ public final class EnchantedItemTooltipHandler extends TooltipDescriptionsHandle
     }
 
     @Override
-    protected Map<String, EnchantmentWithLevel> getByDescriptionId(ItemStack itemStack, HolderLookup.Provider registries) {
-        return getByDescriptionId(EnchantmentComponents.getAllEnchantments(itemStack));
+    protected Map<Component, EnchantmentWithLevel> getByName(ItemStack itemStack, HolderLookup.Provider registries) {
+        return getByName(EnchantmentComponents.getAllEnchantments(itemStack));
     }
 
-    public static Map<String, EnchantmentWithLevel> getByDescriptionId(Stream<EnchantmentWithLevel> stream) {
+    public static Map<Component, EnchantmentWithLevel> getByName(Stream<EnchantmentWithLevel> stream) {
         // an item can contain the same effect multiple times, so make sure to include a merge function in our collect call
-        return stream.mapMulti((EnchantmentWithLevel enchantment, Consumer<Map.Entry<String, EnchantmentWithLevel>> consumer) -> {
-                    // TODO map this to the description component directly without extracting a key in future versions
-                    Component component = enchantment.enchantment().value().description();
-                    if (component.getContents() instanceof TranslatableContents contents) {
-                        consumer.accept(Map.entry(contents.getKey(), enchantment));
-                    }
-                })
-                .collect(Collectors.toMap(Map.Entry::getKey,
-                        Map.Entry::getValue,
+        return stream.collect(Collectors.toMap(
+                (EnchantmentWithLevel enchantment) -> Enchantment.getFullname(enchantment.enchantment(), enchantment.level()),
+                Function.identity(),
                         (EnchantmentWithLevel o1, EnchantmentWithLevel o2) -> o2));
     }
 
     @Override
-    protected Component getValueComponent(EnchantmentWithLevel enchantment) {
+    protected Component getNameComponent(Component originalName, EnchantmentWithLevel enchantment) {
         // Replace the enchantment name with our colored variant.
         return getFullName(enchantment.enchantment(), enchantment.level());
     }

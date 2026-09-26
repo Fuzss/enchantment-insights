@@ -6,11 +6,15 @@ import fuzs.enchantmentinsights.common.client.util.EnchantmentWithLevel;
 import fuzs.enchantmentinsights.common.config.ClientConfig;
 import fuzs.tooltipinsights.common.api.v1.client.handler.TooltipDescriptionsHandler;
 import fuzs.tooltipinsights.common.api.v1.config.StyledTooltipsConfig;
+import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.Enchantment;
 
 import java.util.Map;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public final class EnchantingTableTooltipHandler extends TooltipDescriptionsHandler<EnchantmentWithLevel, ClientConfig.EnchantmentTooltipComponents> {
@@ -26,10 +30,11 @@ public final class EnchantingTableTooltipHandler extends TooltipDescriptionsHand
     }
 
     @Override
-    protected Map<String, EnchantmentWithLevel> getByDescriptionId(ItemStack itemStack, HolderLookup.Provider registries) {
+    protected Map<Component, EnchantmentWithLevel> getByName(ItemStack itemStack, HolderLookup.Provider registries) {
         Stream<EnchantmentWithLevel> stream = registries.lookupOrThrow(Registries.ENCHANTMENT)
                 .listElements()
-                .map(EnchantmentWithLevel::new);
-        return EnchantedItemTooltipHandler.getByDescriptionId(stream);
+                .flatMap((Holder.Reference<Enchantment> holder) -> IntStream.rangeClosed(1, holder.value().getMaxLevel())
+                        .mapToObj((int level) -> new EnchantmentWithLevel(holder, level)));
+        return EnchantedItemTooltipHandler.getByName(stream);
     }
 }
