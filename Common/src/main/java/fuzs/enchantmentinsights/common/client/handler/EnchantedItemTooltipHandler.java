@@ -9,10 +9,7 @@ import fuzs.tooltipinsights.common.api.v1.client.handler.TooltipDescriptionsHand
 import fuzs.tooltipinsights.common.api.v1.config.StyledTooltipsConfig;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.network.chat.CommonComponents;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.ComponentUtils;
-import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.*;
 import net.minecraft.tags.EnchantmentTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
@@ -35,60 +32,54 @@ public final class EnchantedItemTooltipHandler extends TooltipDescriptionsHandle
     }
 
     @Override
-    protected Map<Component, EnchantmentWithLevel> getByName(ItemStack itemStack, HolderLookup.Provider registries) {
+    protected Map<ComponentContents, EnchantmentWithLevel> getByName(ItemStack itemStack, HolderLookup.Provider registries) {
         return getByName(EnchantmentComponents.getAllEnchantments(itemStack));
     }
 
-    public static Map<Component, EnchantmentWithLevel> getByName(Stream<EnchantmentWithLevel> stream) {
-        // an item can contain the same effect multiple times, so make sure to include a merge function in our collect call
-        return stream.collect(Collectors.toMap(
-                (EnchantmentWithLevel enchantment) -> Enchantment.getFullname(enchantment.enchantment(), enchantment.level()),
-                Function.identity(),
-                        (EnchantmentWithLevel o1, EnchantmentWithLevel o2) -> o2));
+    public static Map<ComponentContents, EnchantmentWithLevel> getByName(Stream<EnchantmentWithLevel> stream) {
+        // An item can contain the same enchantment multiple times, so we must include a merge function.
+        return stream.collect(Collectors.toMap((EnchantmentWithLevel enchantment) -> enchantment.enchantment()
+                .value()
+                .description()
+                .getContents(), Function.identity(), (EnchantmentWithLevel o1, EnchantmentWithLevel o2) -> o2));
     }
 
     @Override
     protected Component getNameComponent(Component originalName, EnchantmentWithLevel enchantment) {
-        // Replace the enchantment name with our colored variant.
-        return getFullName(enchantment.enchantment(), enchantment.level());
+        // Keep the original component so text added by other mods is preserved, only replace the name color.
+        MutableComponent enchantmentName = originalName.copy();
+        return addLevelComponent(enchantment.enchantment(),
+                enchantment.level(),
+                mergeEnchantmentStyle(enchantment.enchantment(), enchantmentName));
     }
 
-    /**
-     * @see Enchantment#getFullname(Holder, int)
-     */
-    public static Component getFullName(Holder<Enchantment> enchantment, int level) {
-        MutableComponent component = enchantment.value().description().copy();
-        mergeEnchantmentStyle(enchantment, component);
-        addLevelComponent(enchantment, level, component);
-        return component;
+    private static MutableComponent mergeEnchantmentStyle(Holder<Enchantment> enchantment, MutableComponent enchantmentName) {
+        Style style = getEnchantmentStyle(enchantment);
+        // The config color takes precedence, other root attributes set by other mods are preserved; empty config clears the vanilla color.
+        enchantmentName.setStyle(style.isEmpty() ? Style.EMPTY : style.applyTo(enchantmentName.getStyle()));
+        return enchantmentName;
     }
 
-    private static void mergeEnchantmentStyle(Holder<Enchantment> enchantment, MutableComponent component) {
+    private static Style getEnchantmentStyle(Holder<Enchantment> enchantment) {
+        ClientConfig.EnchantmentTextStyling styling = EnchantmentInsights.CONFIG.get(ClientConfig.class).enchantedItemTooltips.enchantmentNameStyling;
         if (enchantment.is(EnchantmentTags.CURSE)) {
-            ComponentUtils.mergeStyles(component,
-                    EnchantmentInsights.CONFIG.get(ClientConfig.class).enchantedItemTooltips.enchantmentNameStyling.curseStyle);
+            return styling.curseStyle;
         } else if (enchantment.is(EnchantmentTags.TREASURE)) {
-            ComponentUtils.mergeStyles(component,
-                    EnchantmentInsights.CONFIG.get(ClientConfig.class).enchantedItemTooltips.enchantmentNameStyling.treasureStyle);
+            return styling.treasureStyle;
         } else {
-            ComponentUtils.mergeStyles(component,
-                    EnchantmentInsights.CONFIG.get(ClientConfig.class).enchantedItemTooltips.enchantmentNameStyling.defaultStyle);
+            return styling.defaultStyle;
         }
     }
 
-    private static void addLevelComponent(Holder<Enchantment> enchantment, int level, MutableComponent component) {
-        boolean maximumLevel = EnchantmentInsights.CONFIG.get(ClientConfig.class).enchantedItemTooltips.itemTooltipLines.maximumLevel();
-
-        if (maximumLevel || level != 1 || enchantment.value().getMaxLevel() != 1) {
-            component.append(CommonComponents.SPACE).append(Component.translatable("enchantment.level." + level));
-
-            if (maximumLevel) {
-                int maxLevel = enchantment.value().getMaxLevel();
-                component.append(CommonComponents.SPACE)
-                        .append("(")
-                        .append(Component.translatable("enchantment.level." + maxLevel))
-                        .append(")");
-            }
+    private static MutableComponent addLevelComponent(Holder<Enchantment> enchantment, int level, MutableComponent enchantmentName) {
+        if (EnchantmentInsights.CONFIG.get(ClientConfig.class).enchantedItemTooltips.itemTooltipLines.maximumLevel()) {
+            int maxLevel = enchantment.value().getMaxLevel();
+            enchantmentName.append(CommonComponents.SPACE)
+                    .append("(")
+                    .append(Component.translatable("enchantment.level." + maxLevel))
+                    .append(")");
         }
+
+        return enchantmentName;
     }
 }
